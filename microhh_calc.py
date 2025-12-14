@@ -32,13 +32,17 @@ with col3:
 
 with st.form('microhh_form'):
 
-    col1, col2, col3 = st.columns(3)
+    col1, col2, col3, col4, col5 = st.columns(5)
     with col1:
         itot = st.number_input('itot', min_value=1, value=1024, step=1)
     with col2:
         jtot = st.number_input('jtot', min_value=1, value=1024, step=1)
     with col3:
         ktot = st.number_input('ktot', min_value=1, value=256, step=1)
+    with col4:
+        npx = st.number_input('npx', min_value=1, value=1, step=1)
+    with col5:
+        npy = st.number_input('npy', min_value=1, value=1, step=1)
 
     col1, col2, col3 = st.columns(3)
     with col1:
@@ -177,6 +181,7 @@ if submitted:
     st.header('Notes')
     st.write(f'Prognostic 3D fields: **{cat_list(prog_fields)}**.')
     st.write(f'Diagnostic 3D fields: **{cat_list(diag_fields)}**.')
+    st.write(f'Grid points per core/GPU: **{n_3d_fields * ncells / npx / npy:.0f}**.')
     st.write(f'_** Low storage Runge Kutta time integration requires two 3D fields per prognostic field._')
 
 else:
