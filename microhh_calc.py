@@ -20,13 +20,17 @@ st.set_page_config(page_title='MicroHH memory calculator')
 
 st.title('MicroHH 🐏 calculator')
 
-with st.form('microhh_form'):
+# Keep out of main form such that the form reloads once LES/DNS choice is changed.
+col1, col2, col3 = st.columns(3)
+with col1:
+    precision = st.radio('Float precision (bytes)', options=['Single (4)', 'Double (8)'], index=0, horizontal=True)
+with col2:
+    hardware = st.radio('Hardware', options=['CPU', 'GPU'], index=0, horizontal=True)
+with col3:
+    mode = st.radio('Mode', options=['LES', 'DNS'], index=0, horizontal=True)
 
-    col1, col2 = st.columns(2)
-    with col1:
-        precision = st.radio('Float precision', options=['Single (4 byte)', 'Double (8 byte)'], index=0, horizontal=True)
-    with col2:
-        hardware = st.radio('Hardware', options=['CPU', 'GPU'], index=0, horizontal=True)
+
+with st.form('microhh_form'):
 
     col1, col2, col3 = st.columns(3)
     with col1:
@@ -38,23 +42,45 @@ with st.form('microhh_form'):
 
     col1, col2, col3 = st.columns(3)
     with col1:
-        sw_advec = st.selectbox('Advection scheme', options=['2', '2i4', '2i5', '2i62', '4 (DNS)', '4m (DNS)'], index=0)
+        if mode == 'DNS':
+            sw_advec = st.selectbox('Advection scheme', options=['2', '4', '4m'], index=1)
+        else:
+            sw_advec = st.selectbox('Advection scheme', options=['2', '2i4', '2i5', '2i62'], index=2)
     with col2:
-        sw_diff = st.selectbox('Diffusion scheme', options=['2 (DNS)', '4 (DNS)', 'Smagorinsky', 'Deardorff TKE'], index=2)
+        if mode == 'DNS':
+            sw_diff = st.selectbox('Diffusion scheme', options=['2', '4'], index=1)
+        else:
+            sw_diff = st.selectbox('Diffusion scheme', options=['Smagorinsky', 'Deardorff TKE'])
     with col3:
-        sw_thermo = st.selectbox('Thermodynamics', options=['Disabled', 'Buoyancy', 'Dry', 'Moist'], index=3)
+        if mode == 'DNS':
+            sw_thermo = st.selectbox('Thermodynamics', options=['Disabled', 'Buoyancy'], index=0)
+        else:
+            sw_thermo = st.selectbox('Thermodynamics', options=['Disabled', 'Buoyancy', 'Dry', 'Moist'], index=3)
 
     col1, col2, col3 = st.columns(3)
     with col1:
-        sw_rad = st.selectbox('Radiation scheme', options=['Disabled', 'RTE+RRTMGP'])
+        if mode == 'DNS':
+            sw_rad = st.selectbox('Radiation scheme', options=['Disabled'])
+        else:
+            sw_rad = st.selectbox('Radiation scheme', options=['Disabled', 'RTE+RRTMGP'])
     with col2:
-        sw_micro = st.selectbox('Microphysics scheme', options=['Disabled', 'Single moment ice', 'Double moment warm', 'Double moment ice'])
+        if mode == 'DNS':
+            sw_micro = st.selectbox('Microphysics scheme', options=['Disabled'])
+        else:
+            sw_micro = st.selectbox('Microphysics scheme', options=['Disabled', 'Single moment ice', 'Double moment warm', 'Double moment ice'])
     with col3:
         n_slist = st.number_input('Number of scalars', min_value=0, max_value=100, value=0, step=1)
 
     submitted = st.form_submit_button('Calculate', type='primary')
 
 if submitted:
+
+    #
+    # Check for invalid combinations.
+    #
+    if (sw_rad != 'Disabled' or sw_micro != 'Disabled') and sw_thermo != 'Moist':
+        st.error('Radiation and/or microphysics schemes require moist thermodynamics.')
+        st.stop()
 
     sizeof_TF = 4 if precision == 'Single (4 byte)' else 8
 
@@ -64,9 +90,12 @@ if submitted:
     if sw_advec == '2':
         ij_gc = 1
         k_gc = 1
-    elif sw_advec == '4 (DNS)' or sw_advec == '4m (DNS)' or sw_advec == '2i4':
+    elif sw_advec == '4' or sw_advec == '4m':
         ij_gc = 2
         k_gc = 2
+    elif sw_advec == '2i4':
+        ij_gc = 2
+        k_gc = 1
     elif sw_advec == '2i5' or sw_advec == '2i62':
         ij_gc = 3
         k_gc = 1
@@ -103,7 +132,6 @@ if submitted:
     n_prog_fields = len(prog_fields) + n_slist
     if n_slist > 0:
         prog_fields += [f'{n_slist} × scalar']
-
 
     #
     # Diagnostic/tmp/help fields.
@@ -151,7 +179,5 @@ if submitted:
     st.write(f'Diagnostic 3D fields: **{cat_list(diag_fields)}**.')
     st.write(f'_** Low storage Runge Kutta time integration requires two 3D fields per prognostic field._')
 
-
-
 else:
-    st.info('Configure your MicroHH setup above.')
+    st.info('Configure your MicroHH setup above and hit \"Calculate\".')
