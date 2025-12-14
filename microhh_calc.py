@@ -15,6 +15,26 @@ def print_mem(bytes):
     else:
         return f'{bytes / (1024**4):.2f} TB'
 
+def check_grid_decomposition(itot, jtot, ktot, npx, npy):
+    errors = []
+    if itot%npx != 0:
+        errors.append('itot % npx != 0 ')
+    if itot%npy != 0:
+        errors.append('itot % npy != 0 ')
+    if jtot%npx != 0 and npy > 1:
+        errors.append('jtot % npx != 0 ')
+    if jtot%npy != 0:
+        errors.append('jtot % npy != 0 ')
+    if ktot%npx != 0:
+        errors.append('ktot % npx != 0 ')
+
+    valid = len(errors) == 0
+
+    if valid:
+        return True, ''
+    else:
+        return False, ' + '.join(errors)
+
 
 st.set_page_config(page_title='MicroHH memory calculator')
 
@@ -85,6 +105,12 @@ if submitted:
     if (sw_rad != 'Disabled' or sw_micro != 'Disabled') and sw_thermo != 'Moist':
         st.error('Radiation and/or microphysics schemes require moist thermodynamics.')
         st.stop()
+
+    grid_valid, grid_msg = check_grid_decomposition(itot, jtot, ktot, npx, npy)
+    if not grid_valid:
+        st.error(f'Invalid grid decomposition: {grid_msg}.')
+        st.stop()
+
 
     sizeof_TF = 4 if precision == 'Single (4 byte)' else 8
 
@@ -181,7 +207,7 @@ if submitted:
     st.header('Notes')
     st.write(f'Prognostic 3D fields: **{cat_list(prog_fields)}**.')
     st.write(f'Diagnostic 3D fields: **{cat_list(diag_fields)}**.')
-    st.write(f'Grid points per core/GPU: **{n_3d_fields * ncells / npx / npy:.0f}**.')
+    st.write(f'Grid points per core/GPU: **{itot * jtot * ktot / npx / npy:.0f}**.')
     st.write(f'_** Low storage Runge Kutta time integration requires two 3D fields per prognostic field._')
 
 else:
