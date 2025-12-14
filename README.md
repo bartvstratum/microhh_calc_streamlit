@@ -1,2 +1,2 @@
-# microhh_calc_streamlit
+# Streamlit MicroHH calculator
 Streamlit app for basic MicroHH usage calculations.
